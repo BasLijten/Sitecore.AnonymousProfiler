@@ -24,48 +24,32 @@ namespace BasLijten.Profiler.Pipelines.HttpRequest
             {
                 return;
             }
-            //bool debugAllowed = BeginDiagnostics.GetDebugAllowed(site);
-            //BeginDiagnostics.SetDisplayMode(debugAllowed, site);
+
             DiagnosticContext diagnostics = Context.Diagnostics;
-            if (site.DisplayMode != DisplayMode.Edit && site.DisplayMode != DisplayMode.Preview)
-            {
-                BeginDiagnostics.SetSwitches(true, site, diagnostics);
-            }
+
+            BeginDiagnostics.SetSwitches(true, site, diagnostics);
+
             BeginDiagnostics.TraceSettings(site, diagnostics);
         }
 
-
-        /// <summary>
-        /// Gets the switch value.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="setCookie">if set to <c>true</c> this value is written to a cookie.</param>
-        /// <param name="debugAllowed">if set to <c>true</c> [debug allowed].</param>
-        /// <param name="site">The site.</param>
-        /// <returns></returns>
         private static bool GetSwitch(string name, bool setCookie, bool debugAllowed, SiteContext site)
         {
             if (!debugAllowed)
-            {
                 return false;
-            }
             string text = WebUtil.GetQueryString(name, null);
             if (text != null)
             {
-                text = StringUtil.GetString(new string[]
+                text = StringUtil.GetString(new string[] { text, "0" });
+                if (setCookie)
                 {
-                    text,
-                    "0"
-                });
-                if (setCookie && site != null)
-                {
-                    site.Response.SetCookie(name, text);
+                    site?.Response.SetCookie(name, text);
                 }
             }
             else if (site != null)
             {
                 text = site.Request.GetCookie(name);
             }
+
             return text == "1";
         }
 
@@ -78,12 +62,12 @@ namespace BasLijten.Profiler.Pipelines.HttpRequest
         private static void SetSwitches(bool debugAllowed, SiteContext site, DiagnosticContext diagnostics)
         {
             diagnostics.Debugging = false;
-            diagnostics.Profiling = true;
-            diagnostics.Tracing = true;
+            diagnostics.Profiling = BeginDiagnostics.GetSwitch("sc_prof", true, debugAllowed, site);
+            diagnostics.Tracing = BeginDiagnostics.GetSwitch("sc_trace", true, debugAllowed, site);
             diagnostics.ShowRenderingInfo = false;
             diagnostics.DrawRenderingBorders = false;
-            Tracer.RenderOnEndSession = true;
-            Sitecore.Diagnostics.Profiler.RenderOnEndSession = true;
+            Tracer.RenderOnEndSession = !BeginDiagnostics.GetSwitch("sc_hidetrace", true, debugAllowed, site);
+            Sitecore.Diagnostics.Profiler.RenderOnEndSession = !BeginDiagnostics.GetSwitch("sc_hideprof", true, debugAllowed, site);
         }
 
         /// <summary>
